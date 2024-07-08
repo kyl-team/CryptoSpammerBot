@@ -1,0 +1,21 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    networks:
+      - database_network
+    volumes:
+      - ./data:/usr/app/data
+  database:
+    image: mongo
+    restart: unless-stopped
+    networks:
+      - database_network
+    volumes:
+      - ./data/mongod/:/data/db
+    ports:
+      - 27017
+
+
+networks:
+  database_network:
