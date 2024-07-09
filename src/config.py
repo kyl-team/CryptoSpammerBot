@@ -23,7 +23,8 @@ class ServiceConfig(BaseStorage):
     session: SessionConfig = SessionConfig()
     database: DatabaseConfig = DatabaseConfig()
 
-    def get_pathname(self) -> str:
+    @property
+    def pathname(self):
         return 'data/config.json'
 
 
