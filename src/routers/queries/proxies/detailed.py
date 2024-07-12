@@ -5,8 +5,8 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from beanie import PydanticObjectId
 
+from core.proxies import is_valid_proxy
 from database import Proxy
-from routers.queries.proxies.utils import is_valid_proxy
 
 detailed_router = Router()
 

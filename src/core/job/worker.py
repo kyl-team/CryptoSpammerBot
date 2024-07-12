@@ -1,4 +1,4 @@
-from .storage import storage
+from core.job.storage import storage
 
 
 async def start():

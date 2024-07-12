@@ -7,8 +7,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from . import worker
-from .storage import storage
+from core import job
 from ..state_clear import get_state_clear_markup
 
 
@@ -25,19 +24,21 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
 
     match action:
         case 'similar':
-            storage.similar = not storage.similar
-            await storage.save()
+            job.storage.similar = not job.storage.similar
+            await job.storage.save()
         case 'edit':
             await state.set_state(JobMessageStates.edit)
             return await query.message.edit_text('<b>Введите сообщение для отправки владельцам бесед</b>',
                                                  reply_markup=get_state_clear_markup())
         case 'start':
-            await worker.start()
+            await job.start()
+            return await query.message.edit_text('⌛ <b>Запуск работы...</b>')
+
 
     builder = InlineKeyboardBuilder()
 
     builder.button(text='✏️ Редактировать сообщение', callback_data='job_edit')
-    if storage.similar:
+    if job.storage.similar:
         builder.button(text='Искать похожие ✅', callback_data='job_similar')
     else:
         builder.button(text='Искать похожие ❌', callback_data='job_similar')
@@ -51,8 +52,8 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
 
 @menu_router.message(StateFilter(JobMessageStates.edit), F.text)
 async def edit_message(message: Message):
-    storage.message.text = message.text
-    await storage.save()
+    job.storage.message.text = message.text
+    await job.storage.save()
 
     builder = InlineKeyboardBuilder()
 

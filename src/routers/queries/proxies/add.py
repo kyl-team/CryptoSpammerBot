@@ -7,8 +7,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from core.proxies import is_valid_proxy
 from database import Proxy
-from routers.queries.proxies.utils import is_valid_proxy
 from routers.queries.state_clear import get_state_clear_markup
 
 add_router = Router()
