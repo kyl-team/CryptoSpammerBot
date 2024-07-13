@@ -8,6 +8,7 @@ import database
 from routers import commands_router, queries_router
 
 logging.getLogger('pymongo').setLevel(logging.WARNING)
+logging.getLogger('pyrogram').setLevel(logging.WARNING)
 logging.basicConfig(level=logging.DEBUG)
 
 bot.dp.include_routers(commands_router, queries_router)

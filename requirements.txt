@@ -1,8 +1,8 @@
-pydantic~=2.7.4
+pydantic~=2.8.2
 aiohttp[speedups]~=3.9.5
 pyrogram~=2.0.106
 tgcrypto~=1.2.5
-aiogram~=3.8.0
+aiogram~=3.10.0
 yarl~=1.9.4
 beanie~=1.26.0
 motor~=3.5.0

@@ -2,4 +2,7 @@ from beanie import Document
 
 
 class Account(Document):
-    pass
+    username: str | None
+    user_id: int
+    phone: str
+    session: str

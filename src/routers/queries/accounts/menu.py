@@ -15,7 +15,8 @@ async def menu(query: CallbackQuery):
 
     count = 0
     async for account in Account.find():
-        builder.button(text=account.id, callback_data=f'accounts_{account.id}')
+        builder.button(text=f'@{account.username}' if account.username else f'I{account.user_id}',
+                       callback_data=f'accounts_{account.user_id}')
         count += 1
 
     builder.button(text='🔙 Назад', callback_data='start')
