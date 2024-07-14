@@ -34,7 +34,6 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
             await job.start()
             return await query.message.edit_text('⌛ <b>Запуск работы...</b>')
 
-
     builder = InlineKeyboardBuilder()
 
     builder.button(text='✏️ Редактировать сообщение', callback_data='job_edit')

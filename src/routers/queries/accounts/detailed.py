@@ -20,9 +20,6 @@ async def get_detailed_account(query: CallbackQuery, match: re.Match[str]):
     if not client.is_connected:
         await client.connect()
 
-    async for dialog in client.get_dialogs():
-        print(dialog.chat.username)
-
     await query.message.edit_text(f'<b>Аккаунт @{account.username} [<code>{account.user_id}</code>]</b>\n'
                                   f'\n'
                                   f'Чатов: ')

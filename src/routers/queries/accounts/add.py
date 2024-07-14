@@ -1,6 +1,3 @@
-import logging
-import math
-import random
 import re
 
 from aiogram import Router, F
@@ -13,7 +10,7 @@ from pyrogram.errors import SessionPasswordNeeded, PhoneCodeExpired
 
 from core.accounts import get_client
 from database import Account
-from routers.queries.state_clear import get_state_clear_markup
+from ..state_clear import get_state_clear_markup
 
 
 def get_back_markup():
@@ -84,24 +81,21 @@ async def enter_code_or_password(message: Message, state: FSMContext):
 
     if current_state == ManualAddGroup.code:
         code = message.text
+
+        try:
+            await client.sign_in(phone, phone_hash, code)
+        except SessionPasswordNeeded:
+            await state.set_state(ManualAddGroup.password)
+            return await message.reply('⚠️ Введите пароль 2FA аутентификации', reply_markup=get_state_clear_markup())
+        except PhoneCodeExpired:
+            await state.clear()
+            return await message.reply('❌ Код устарел', reply_markup=get_back_markup())
     elif current_state == ManualAddGroup.password:
-        code = data['code']
-        client.password = message.text
-        print('Password set')
+        password = message.text
+        await client.check_password(password)
     else:
         raise RuntimeError('Not possible state')
 
-    try:
-        print(client.password, phone, phone_hash, code)
-        await client.sign_in(phone, phone_hash, code)
-    except SessionPasswordNeeded as e:
-        logging.exception(e)
-        await state.update_data({'code': code})
-        await state.set_state(ManualAddGroup.password)
-        return await message.reply('⚠️ Введите пароль 2FA аутентификации', reply_markup=get_state_clear_markup())
-    except PhoneCodeExpired:
-        await state.clear()
-        return await message.reply('❌ Код устарел', reply_markup=get_back_markup())
     await state.clear()
 
     me = await client.get_me()
