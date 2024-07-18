@@ -1,4 +1,4 @@
-from beanie import Document, PydanticObjectId
+from beanie import Document
 
 
 class Account(Document):
@@ -6,4 +6,3 @@ class Account(Document):
     user_id: int
     phone: str
     session: str
-    proxy_id: PydanticObjectId

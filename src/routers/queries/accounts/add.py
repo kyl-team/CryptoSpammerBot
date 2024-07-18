@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from pyrogram.errors import SessionPasswordNeeded, PhoneCodeExpired
+from pyrofork.errors import SessionPasswordNeeded, PhoneCodeExpired
 
 from core.accounts import get_client
 from database import Account
@@ -84,6 +84,7 @@ async def enter_code_or_password(message: Message, state: FSMContext):
 
         try:
             await client.sign_in(phone, phone_hash, code)
+            await client.prof
         except SessionPasswordNeeded:
             await state.set_state(ManualAddGroup.password)
             return await message.reply('⚠️ Введите пароль 2FA аутентификации', reply_markup=get_state_clear_markup())
