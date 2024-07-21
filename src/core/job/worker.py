@@ -9,7 +9,7 @@ from pyrofork.raw.types import UserFull
 from pyrofork.raw.types.messages import ChatsSlice
 from yarl import URL
 
-from core.job import current, JobPhase, storage
+from core.job import current, storage
 from database import Channel, Account, Proxy
 
 
@@ -107,8 +107,6 @@ async def start():
         proxy_index += 1
 
     if storage.similar:
-        current.phase = JobPhase.SIMILAR
-
         channel_chunks = chunks(list(channels), len(clients))
 
         tasks = []
@@ -121,8 +119,6 @@ async def start():
             for channel in group:
                 channels.add(channel)
 
-    current.phase = JobPhase.JOIN_CHANNELS
-
     channels_for_clients = chunks(list(channels), len(clients))
 
     tasks = []
@@ -131,4 +127,4 @@ async def start():
 
     await asyncio.gather(*tasks)
 
-    print('Total', len(channels), 'channels')
+    current.running = False
