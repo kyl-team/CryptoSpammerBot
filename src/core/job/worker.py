@@ -13,13 +13,8 @@ from core.job import current, storage
 from database import Channel, Account, Proxy
 
 
-def __chunks(arr: list, size: int):
-    for i in range(0, len(arr), size):
-        yield arr[i:i + size]
-
-
-def chunks(arr: list, size: int) -> list:
-    return list(__chunks(arr, size))
+def chunks(arr: list, size: int):
+    return [arr[i:i + size] for i in range(0, len(arr), size)]
 
 
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
