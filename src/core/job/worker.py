@@ -69,7 +69,6 @@ async def work(client: Client, channels: list[str]) -> None:
 
             for occurrence in occurrences:
                 discussion = await client.get_chat(occurrence)
-                await discussion.join()
 
                 async for discussion_member in discussion.get_members():
                     await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
