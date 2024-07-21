@@ -1,4 +1,7 @@
+import re
+
 import aiohttp
+from bs4 import BeautifulSoup, Tag
 
 from database import ChannelService, Channel
 
@@ -8,7 +11,7 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
         case 'tgstat.ru':
             channels: set[str] = set()
             async with aiohttp.ClientSession() as session:
-                async with session.get('https://uk.tgstat.com/ratings/channels/crypto', headers={
+                async with session.get('https://uk.tgstat.com/ratings/channels/crypto/public', headers={
                     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                     "accept-language": "en-US,en;q=0.9",
                     "cache-control": "max-age=0",
