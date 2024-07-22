@@ -15,7 +15,7 @@ async def proxies_menu(query: CallbackQuery):
 
     count = 0
     async for proxy in Proxy.find():
-        builder.button(text=proxy.url, callback_data=f'proxies_{proxy.id}')
+        builder.button(text=proxy.with_hidden_credentials, callback_data=f'proxies_{proxy.id}')
         count += 1
 
     builder.button(text='🔙 Назад', callback_data='start')

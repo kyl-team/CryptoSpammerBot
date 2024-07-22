@@ -18,20 +18,20 @@ async def get_detailed_account(query: CallbackQuery, match: re.Match[str]):
         return await query.answer('❌ Аккаунт не найден', show_alert=True)
 
     builder = InlineKeyboardBuilder()
+    builder.button(text='🗑️ Удалить', callback_data=f'accounts_{account.user_id}_delete')
     builder.button(text='🔙 Назад', callback_data='accounts')
+    builder.adjust(1, 1)
 
     if action == 'delete':
         await account.delete()
-        return await query.message.edit_text('✅ Аккаунт удален')
+        builder = InlineKeyboardBuilder()
+        builder.button(text='🔙 Назад', callback_data='accounts')
+        return await query.message.edit_text('✅ Аккаунт удален', reply_markup=builder.as_markup())
 
     client = get_client(account.phone, session_string=account.session)
     if not client.is_connected:
         await client.connect()
 
-    builder.button(text='🗑️ Удалить', callback_data=f'accounts_{account.user_id}_delete')
-
-    builder.adjust(1, 1)
-
     await query.message.edit_text(f'<b>Аккаунт @{account.username} [<code>{account.user_id}</code>]</b>\n'
                                   f'\n'
-                                  f'Телефон: {account.phone}', reply_markup=builder.as_markup())
+                                  f'Телефон: <code>{account.phone}</code>', reply_markup=builder.as_markup())

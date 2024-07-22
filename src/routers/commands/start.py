@@ -3,7 +3,6 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from core import job
 from database import Proxy, Channel, Account
 
 start_router = Router()
@@ -31,9 +30,7 @@ async def start_command(event: Message | CallbackQuery):
             '\n'
             f'Каналов загружено: <code>{channels_count}</code>\n'
             f'Прокси загружено: <code>{proxies_count}</code>\n'
-            f'Аккаунтов загружено: <code>{accounts_count}</code>\n'
-            f'\n'
-            f'Воркер: <code>{job.current.running_string}</code>'
+            f'Аккаунтов загружено: <code>{accounts_count}</code>'
         ),
         'reply_markup': builder.as_markup()
     }

@@ -84,7 +84,6 @@ async def enter_code_or_password(message: Message, state: FSMContext):
 
         try:
             await client.sign_in(phone, phone_hash, code)
-            await client.prof
         except SessionPasswordNeeded:
             await state.set_state(ManualAddGroup.password)
             return await message.reply('⚠️ Введите пароль 2FA аутентификации', reply_markup=get_state_clear_markup())

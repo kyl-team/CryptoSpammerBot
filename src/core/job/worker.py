@@ -2,14 +2,14 @@ import asyncio
 import random
 import re
 
+from pydantic import BaseModel
 from pyrofork import Client
 from pyrofork.raw import functions
 from pyrofork.raw.functions.channels import GetChannelRecommendations
 from pyrofork.raw.types import UserFull
 from pyrofork.raw.types.messages import ChatsSlice
-from yarl import URL
 
-from core.job import current, storage
+from core.job import storage
 from database import Channel, Account, Proxy
 
 
@@ -38,16 +38,26 @@ dictionary: dict[str, list[str]] = {
 
 
 def obfuscate_text(text: str):
-    for source in dictionary:
+    words = text.split()
+    for word in words:
         if random.random() > 0.5:
-            text = source.replace(source, random.choice(dictionary[source]))
+            source = random.choice(list(dictionary.keys()))
+            new_word = word.replace(source, random.choice(dictionary[source]))
+            text.replace(word, new_word, 1)
     return text
 
 
 peer_pattern = re.compile(r'@([a-z0-9A-Z]+)')
 
 
+class WorkResult(BaseModel):
+    channels: list[str] = []
+    users: list[str] = []
+
+
 async def work(client: Client, channels: list[str]) -> None:
+    result = WorkResult()
+
     for channel in channels:
         channel_chat = await client.join_chat(channel)
         await channel_chat.join()
@@ -70,8 +80,6 @@ async def work(client: Client, channels: list[str]) -> None:
 
 
 async def start():
-    current.clear()
-
     channels: set[str] = set()
 
     async for channel in Channel.find():
@@ -84,13 +92,12 @@ async def start():
 
     async for account in Account.find():
         proxy = proxies[proxy_index % len(proxies)]
-        proxy_url = URL('http://' + proxy.url)
         proxy_data = {
             'scheme': 'http',
-            'hostname': proxy_url.host,
-            'port': proxy_url.port,
-            'username': proxy_url.user,
-            'password': proxy_url.password,
+            'hostname': proxy.hostname,
+            'port': proxy.port,
+            'username': proxy.username,
+            'password': proxy.password,
         }
         clients.append(Client(
             name=account.phone,
@@ -120,5 +127,3 @@ async def start():
         tasks.append(work(clients[i], channels_for_clients[i]))
 
     await asyncio.gather(*tasks)
-
-    current.running = False
