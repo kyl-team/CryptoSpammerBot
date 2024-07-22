@@ -50,33 +50,71 @@ def obfuscate_text(text: str):
 peer_pattern = re.compile(r'@([a-z0-9A-Z]+)')
 
 
-class WorkResult(BaseModel):
-    channels: list[str] = []
-    users: list[str] = []
+class UserResult(BaseModel):
+    id: int
+    username: str
+    phone: str | None
+    first_name: str | None
+    last_name: str | None
 
 
-async def work(client: Client, channels: list[str]) -> None:
-    result = WorkResult()
+class UserChatResult(BaseModel):
+    members: list[UserResult] = []
 
+
+class ChannelUserResult(UserResult):
+    bio: str | None = None
+    chats: list[UserChatResult] = []
+
+
+class ChannelResult(BaseModel):
+    id: int
+    name: str
+    has_linked_chat: bool
+    members: list[ChannelUserResult] = []
+
+
+WorkResult = list[ChannelResult]
+
+
+async def work(client: Client, channels: list[str]) -> WorkResult:
+    results: WorkResult = []
     for channel in channels:
         channel_chat = await client.join_chat(channel)
-        await channel_chat.join()
-        linked = channel_chat.linked_chat
-        await linked.join()
-        members = []
-        async for member in linked.get_members():
-            members.append(member)
+        channel_result = ChannelResult(id=channel_chat.id, name=channel, has_linked_chat=bool(channel_chat.linked_chat))
+        if channel_chat.linked_chat:
+            await channel_chat.linked_chat.join()
+            members = []
+            async for member in channel_chat.linked_chat.get_members():
+                if not member.user.is_bot:
+                    members.append(member)
 
-        for member in members:
-            user: UserFull = await client.invoke(
-                functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
-            occurrences = peer_pattern.findall(user.about)
+            for member in members:
+                user: UserFull = await client.invoke(
+                    functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
 
-            for occurrence in occurrences:
-                discussion = await client.get_chat(occurrence)
+                user_result = ChannelUserResult(id=member.user.id, username=member.user.username,
+                                                phone=member.user.phone_number,
+                                                first_name=member.user.first_name, last_name=member.user.last_name,
+                                                bio=user.about)
+                channel_result.members.append(user_result)
 
-                async for discussion_member in discussion.get_members():
-                    await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+                occurrences = peer_pattern.findall(user.about)
+
+                for occurrence in occurrences:
+                    discussion = await client.get_chat(occurrence)
+
+                    user_chat = UserChatResult()
+                    user_result.chats.append(user_chat)
+
+                    async for discussion_member in discussion.get_members():
+                        user_chat.members.append(
+                            UserResult(id=discussion_member.user.id, username=discussion_member.user.username,
+                                       phone=discussion_member.user.phone_number,
+                                       first_name=discussion_member.user.first_name,
+                                       last_name=discussion_member.user.last_name))
+                        await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+    return results
 
 
 async def start():
@@ -126,4 +164,9 @@ async def start():
     for i in range(len(clients)):
         tasks.append(work(clients[i], channels_for_clients[i]))
 
-    await asyncio.gather(*tasks)
+    results_arr = await asyncio.gather(*tasks)
+    results: list[ChannelResult] = []
+    for result_items in results_arr:
+        results += result_items
+
+    # TODO:
