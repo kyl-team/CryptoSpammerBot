@@ -187,8 +187,6 @@ async def start(user_id: int):
     timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
     markdown_content = f'# Отчет о работе {timestamp}\n'
 
-    markdown_content += '## По каналам\n'
-
     for result in results:
         markdown_content += f'## Канал @{result.name} [{result.id}], беседа: {"есть" if result.has_linked_chat else "нет"}\n\n'
         markdown_content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
