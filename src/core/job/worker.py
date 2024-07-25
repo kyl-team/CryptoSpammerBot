@@ -1,7 +1,10 @@
 import asyncio
 import random
 import re
+from datetime import datetime
+from typing import Any
 
+from aiogram.types import BufferedInputFile
 from pydantic import BaseModel
 from pyrofork import Client
 from pyrofork.raw import functions
@@ -9,6 +12,7 @@ from pyrofork.raw.functions.channels import GetChannelRecommendations
 from pyrofork.raw.types import UserFull
 from pyrofork.raw.types.messages import ChatsSlice
 
+from bot import bot
 from core.job import storage
 from database import Channel, Account, Proxy
 
@@ -38,27 +42,31 @@ dictionary: dict[str, list[str]] = {
 
 
 def obfuscate_text(text: str):
-    words = text.split()
-    for word in words:
+    words = []
+    for word in text.split():
         if random.random() > 0.5:
             source = random.choice(list(dictionary.keys()))
             new_word = word.replace(source, random.choice(dictionary[source]))
-            text.replace(word, new_word, 1)
-    return text
+            print(new_word)
+            words.append(new_word)
+        else:
+            words.append(word)
+    return ' '.join(words)
 
 
-peer_pattern = re.compile(r'@([a-z0-9A-Z]+)')
+peer_pattern = re.compile(r'@(\w+)')
 
 
 class UserResult(BaseModel):
     id: int
-    username: str
+    username: str | None
     phone: str | None
     first_name: str | None
     last_name: str | None
 
 
 class UserChatResult(BaseModel):
+    username: str
     members: list[UserResult] = []
 
 
@@ -71,6 +79,8 @@ class ChannelResult(BaseModel):
     id: int
     name: str
     has_linked_chat: bool
+    client_name: str
+    client_proxy: dict[str, Any]
     members: list[ChannelUserResult] = []
 
 
@@ -80,8 +90,9 @@ WorkResult = list[ChannelResult]
 async def work(client: Client, channels: list[str]) -> WorkResult:
     results: WorkResult = []
     for channel in channels:
-        channel_chat = await client.join_chat(channel)
-        channel_result = ChannelResult(id=channel_chat.id, name=channel, has_linked_chat=bool(channel_chat.linked_chat))
+        channel_chat = await client.get_chat(channel)
+        channel_result = ChannelResult(id=channel_chat.id, name=channel, has_linked_chat=bool(channel_chat.linked_chat),
+                                       client_name=client.name, client_proxy=client.proxy)
         if channel_chat.linked_chat:
             await channel_chat.linked_chat.join()
             members = []
@@ -90,8 +101,9 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
                     members.append(member)
 
             for member in members:
-                user: UserFull = await client.invoke(
+                user: Any = await client.invoke(
                     functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
+                user: UserFull = user.full_user
 
                 user_result = ChannelUserResult(id=member.user.id, username=member.user.username,
                                                 phone=member.user.phone_number,
@@ -104,7 +116,7 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
                 for occurrence in occurrences:
                     discussion = await client.get_chat(occurrence)
 
-                    user_chat = UserChatResult()
+                    user_chat = UserChatResult(username=occurrence)
                     user_result.chats.append(user_chat)
 
                     async for discussion_member in discussion.get_members():
@@ -114,14 +126,15 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
                                        first_name=discussion_member.user.first_name,
                                        last_name=discussion_member.user.last_name))
                         await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+        results.append(channel_result)
     return results
 
 
-async def start():
+async def start(user_id: int):
     channels: set[str] = set()
 
     async for channel in Channel.find():
-        channels.add(channel['url'])
+        channels.add(channel.url)
 
     proxies = await Proxy.find().to_list()
     clients = []
@@ -137,12 +150,14 @@ async def start():
             'username': proxy.username,
             'password': proxy.password,
         }
-        clients.append(Client(
+        client = Client(
             name=account.phone,
             proxy=proxy_data,
             session_string=account.session,
             in_memory=True
-        ))
+        )
+        clients.append(client)
+        await client.connect()
         proxy_index += 1
 
     if storage.similar:
@@ -169,4 +184,26 @@ async def start():
     for result_items in results_arr:
         results += result_items
 
-    # TODO:
+    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    markdown_content = f'# Отчет о работе {timestamp}\n'
+
+    markdown_content += '## По каналам\n'
+
+    for result in results:
+        markdown_content += f'## Канал @{result.name} [{result.id}], беседа: {"есть" if result.has_linked_chat else "нет"}\n\n'
+        markdown_content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
+        markdown_content += '### Участники\n'
+        i = 0
+        for member in result.members:
+            markdown_content += f'{i}. @{member.username} ({member.first_name} {member.last_name}), телефон: {member.phone}, био: "{member.bio}", найдено бесед: {len(member.chats)} [{member.id}]\n'
+            for chat in member.chats:
+                markdown_content += f'    Беседа @{chat.username}, участников: {len(chat.members)}\n'
+                j = 0
+                for chat_member in chat.members:
+                    markdown_content += f'        {j}. Участник @{chat_member.username} ({chat_member.first_name} {chat_member.last_name}), телефон: {chat_member.phone} [{chat_member.id}]\n'
+                    j += 1
+            i += 1
+
+    report = BufferedInputFile(markdown_content.encode(),
+                               filename=f"report.md")
+    await bot.send_document(user_id, report, caption=f'Отчет от {timestamp}')
