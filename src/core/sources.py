@@ -7,9 +7,10 @@ from database import ChannelService, Channel
 
 
 async def update_channels(service: ChannelService, data: dict[str, ...] | None = None) -> int:
+    channels: set[str] = set()
+
     match service:
         case 'tgstat.ru':
-            channels: set[str] = set()
             async with aiohttp.ClientSession() as session:
                 async with session.get('https://uk.tgstat.com/ratings/channels/crypto/public', headers={
                     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -40,12 +41,28 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
                                     match = pattern.match(url.strip())
                                     if match:
                                         channels.add(match.group(1))
-            for channel in channels:
-                document = Channel(url=channel, service=service)
-                await document.insert()
-            return len(channels)
         case 'telemetr.io':
-            raise NotImplementedError('WIP')
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://telemetr.io/en/catalog/global/cryptocurrencies', headers={
+                    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                    "accept-language": "en-US,en;q=0.6",
+                    "cache-control": "no-cache",
+                    "pragma": "no-cache",
+                    "priority": "u=0, i",
+                    "sec-ch-ua": "\"Not)A;Brand\";v=\"99\", \"Brave\";v=\"127\", \"Chromium\";v=\"127\"",
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": "\"Windows\"",
+                    "sec-fetch-dest": "document",
+                    "sec-fetch-mode": "navigate",
+                    "sec-fetch-site": "same-origin",
+                    "sec-fetch-user": "?1",
+                    "sec-gpc": "1"
+                }) as response:
+                    text = await response.text()
+                    bs4 = BeautifulSoup(text, 'html.parser')
+                    elements = bs4.select(".channel-name__attribute > span > span")
+                    for element in elements:
+                        channels.add(element.text)
         case 'telemetr.me':
             if not data or 'session_id' not in data:
                 raise ValueError('Missing session_id')
@@ -55,3 +72,9 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
             raise NotImplementedError('WIP')
         case _:
             raise ValueError(f'Unknown service: {service}')
+
+    for channel in channels:
+        document = Channel(url=channel, service=service)
+        await document.insert()
+
+    return len(channels)
