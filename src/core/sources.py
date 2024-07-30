@@ -56,7 +56,8 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
                     "sec-fetch-mode": "navigate",
                     "sec-fetch-site": "same-origin",
                     "sec-fetch-user": "?1",
-                    "sec-gpc": "1"
+                    "sec-gpc": "1",
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
                 }) as response:
                     text = await response.text()
                     bs4 = BeautifulSoup(text, 'html.parser')

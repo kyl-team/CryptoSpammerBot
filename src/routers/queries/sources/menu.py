@@ -1,3 +1,5 @@
+import re
+
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -7,8 +9,12 @@ from database import channel_services, Channel
 menu_router = Router()
 
 
-@menu_router.callback_query(F.data == 'sources')
-async def menu(query: CallbackQuery):
+@menu_router.callback_query(F.data.regexp(re.compile(r'sources(_(clear))?')).as_('match'))
+async def menu(query: CallbackQuery, match: re.Match[str]):
+    if match.group(2) == 'clear':
+        await Channel.find().delete()
+        await query.answer('✅ Каналы очищены')
+
     loaded_text = ''
     builder = InlineKeyboardBuilder()
     i = 1
@@ -17,6 +23,8 @@ async def menu(query: CallbackQuery):
         loaded_text += f'    <b>{service}</b>: <code>{await Channel.find(Channel.service == service).count()}</code>\n'
         builder.button(text=f'{i}. {service}', callback_data=f'sources_update_{service}')
         i += 1
+
+    builder.button(text='🗑️ Очистить список каналов', callback_data='sources_clear')
 
     builder.button(text='🔙 Назад', callback_data='start')
 
