@@ -24,6 +24,6 @@ if __name__ == '__main__':
         if sys.platform == 'linux' or sys.platform == 'darwin':
             import uvloop
 
-            uvloop.install()
+            uvloop.run(main())
         else:
             asyncio.run(main())
