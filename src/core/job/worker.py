@@ -82,6 +82,7 @@ class ChannelResult(BaseModel):
     client_name: str
     client_proxy: dict[str, Any]
     members: list[ChannelUserResult] = []
+    errors: list[str]
 
 
 WorkResult = list[ChannelResult]
@@ -90,34 +91,59 @@ WorkResult = list[ChannelResult]
 async def work(client: Client, channels: list[str]) -> WorkResult:
     results: WorkResult = []
     for channel in channels:
-        channel_chat = await client.get_chat(channel)
+        try:
+            channel_chat = await client.get_chat(channel)
+        except Exception:
+            continue
+        errors = []
         channel_result = ChannelResult(id=channel_chat.id, name=channel, has_linked_chat=bool(channel_chat.linked_chat),
-                                       client_name=client.name, client_proxy=client.proxy)
+                                       client_name=client.name, client_proxy=client.proxy, errors=errors)
+        results.append(channel_result)
+
         if channel_chat.linked_chat:
-            await channel_chat.linked_chat.join()
+            try:
+                await channel_chat.linked_chat.join()
+            except Exception:
+                errors.append(f'Не удалось зайти в чат канала')
             members = []
-            async for member in channel_chat.linked_chat.get_members():
-                if not member.user.is_bot:
-                    members.append(member)
+            try:
+                async for member in channel_chat.linked_chat.get_members():
+                    if not member.user.is_bot:
+                        members.append(member)
+            except Exception:
+                errors.append(
+                    f'Не удалось получить список участников чата @{channel_chat.linked_chat.username} [{channel_chat.linked_chat.id}]')
+                continue
 
             for member in members:
-                user: Any = await client.invoke(
-                    functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
-                user: UserFull = user.full_user
+                try:
+                    user: Any = await client.invoke(
+                        functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
+                    user: UserFull = user.full_user
 
-                user_result = ChannelUserResult(id=member.user.id, username=member.user.username,
-                                                phone=member.user.phone_number,
-                                                first_name=member.user.first_name, last_name=member.user.last_name,
-                                                bio=user.about)
-                channel_result.members.append(user_result)
+                    user_result = ChannelUserResult(id=member.user.id, username=member.user.username,
+                                                    phone=member.user.phone_number,
+                                                    first_name=member.user.first_name, last_name=member.user.last_name,
+                                                    bio=user.about)
+                    channel_result.members.append(user_result)
 
-                occurrences = peer_pattern.findall(user.about)
+                    occurrences = peer_pattern.findall(user.about)
+                except Exception:
+                    errors.append(
+                        f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}]')
+                    continue
 
                 for occurrence in occurrences:
-                    discussion = await client.get_chat(occurrence)
+                    try:
+                        discussion = await client.get_chat(occurrence)
 
-                    user_chat = UserChatResult(username=occurrence)
-                    user_result.chats.append(user_chat)
+                        user_chat = UserChatResult(username=occurrence)
+                        user_result.chats.append(user_chat)
+                    except Exception:
+                        errors.append(
+                            f'Не удалось получить пользовательский чат @{occurrence} пользователя'
+                            f' @{member.user.username} [{member.user.id}]')
+                        continue
 
                     async for discussion_member in discussion.get_members():
                         user_chat.members.append(
@@ -125,8 +151,12 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
                                        phone=discussion_member.user.phone_number,
                                        first_name=discussion_member.user.first_name,
                                        last_name=discussion_member.user.last_name))
-                        await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
-        results.append(channel_result)
+                        try:
+                            await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+                        except Exception:
+                            errors.append(
+                                f'Не удалось написать пользователю @{discussion_member.user.username} [{discussion_member.user.id}] (беседа @{discussion.username} [{discussion.id}])')
+                            continue
     return results
 
 
@@ -142,14 +172,17 @@ async def start(user_id: int):
     proxy_index = 0
 
     async for account in Account.find():
-        proxy = proxies[proxy_index % len(proxies)]
-        proxy_data = {
-            'scheme': 'http',
-            'hostname': proxy.hostname,
-            'port': proxy.port,
-            'username': proxy.username,
-            'password': proxy.password,
-        }
+        if len(proxies) > 0:
+            proxy = proxies[proxy_index % len(proxies)]
+            proxy_data = {
+                'scheme': 'http',
+                'hostname': proxy.hostname,
+                'port': proxy.port,
+                'username': proxy.username,
+                'password': proxy.password,
+            }
+        else:
+            proxy_data = None
         client = Client(
             name=account.phone,
             proxy=proxy_data,
@@ -190,6 +223,9 @@ async def start(user_id: int):
     for result in results:
         markdown_content += f'## Канал @{result.name} [{result.id}], беседа: {"есть" if result.has_linked_chat else "нет"}\n\n'
         markdown_content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
+        markdown_content += '### Ошибки\n'
+        for error in result.errors:
+            markdown_content += f' * {error}\n'
         markdown_content += '### Участники\n'
         i = 0
         for member in result.members:

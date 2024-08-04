@@ -20,7 +20,8 @@ async def menu(query: CallbackQuery, match: re.Match[str]):
     i = 1
 
     for service in channel_services:
-        loaded_text += f'    <b>{service}</b>: <code>{await Channel.find(Channel.service == service).count()}</code>\n'
+        count = await Channel.find(Channel.service == service).count()
+        loaded_text += f'    <b>{service}</b>: <code>{count}</code>\n'
         builder.button(text=f'{i}. {service}', callback_data=f'sources_update_{service}')
         i += 1
 
