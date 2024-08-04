@@ -4,7 +4,7 @@ from typing import Literal
 from beanie import Document
 from pydantic import Field
 
-channel_services = ['tgstat.ru', 'telemetr.io', 'telemetr.me']
+channel_services = ['tgstat.ru', 'telemetr.io']
 ChannelService = Literal['tgstat.ru', 'telemetr.io', 'telemetr.me']
 
 
