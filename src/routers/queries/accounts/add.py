@@ -27,7 +27,7 @@ add_router = Router()
 async def add_account(query: CallbackQuery):
     builder = InlineKeyboardBuilder()
 
-    builder.button(text='🤖 Смс активаторы', callback_data='accounts_add_auto')
+    # builder.button(text='🤖 Смс активаторы', callback_data='accounts_add_auto')
     builder.button(text='🔨 Вручную', callback_data='accounts_add_manual')
     builder.button(text='🔙 Назад', callback_data='accounts')
 
