@@ -1,7 +1,7 @@
 import asyncio
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from aiogram.types import BufferedInputFile, Message
@@ -92,10 +92,23 @@ class TaskState:
         self.message = message
         self.total = total
         self.progress = 0
+        self.state = None
+        self.last_print = None
 
-    async def update(self):
+    async def sync(self):
+        if datetime.now() > self.last_print + timedelta(seconds=10):
+            state_text = f", {self.state}" if self.state else ""
+            await self.message.edit_text(f'⌛ Обработано: {self.progress}/{self.total}{state_text}')
+            self.last_print = datetime.now()
+
+    async def start_channel(self):
         self.progress += 1
-        await self.message.edit_text(f'⌛ Обработано: {self.progress}/{self.total}')
+        self.state = None
+        await self.sync()
+
+    async def set_state(self, state: str):
+        self.state = state
+        await self.sync()
 
 
 WorkResult = list[ChannelResult]
@@ -104,7 +117,7 @@ WorkResult = list[ChannelResult]
 async def work(client: Client, channels: list[str], state: TaskState) -> WorkResult:
     results: WorkResult = []
     for channel in channels:
-        await state.update()
+        await state.start_channel()
         try:
             channel_chat = await client.get_chat(channel)
         except Exception:
@@ -115,22 +128,28 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
         results.append(channel_result)
 
         if channel_chat.linked_chat:
+            await state.set_state('вход в беседу')
             try:
                 await channel_chat.linked_chat.join()
                 await asyncio.sleep(3)
             except Exception:
                 errors.append(f'Не удалось зайти в чат канала')
+
+            await state.set_state('получение мемберов')
             members = []
             try:
                 async for member in channel_chat.linked_chat.get_members():
                     if not member.user.is_bot:
                         members.append(member)
+                        await state.set_state(f'получение мемберов ({len(members)})')
             except Exception:
                 errors.append(
                     f'Не удалось получить список участников чата @{channel_chat.linked_chat.username} [{channel_chat.linked_chat.id}]')
                 continue
 
-            for member in members:
+            for k in range(len(members)):
+                member = members[k]
+                await state.set_state(f'обработка мембера ({k}/{len(members)})')
                 try:
                     user: Any = await client.invoke(
                         functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
@@ -148,7 +167,10 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                         f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}]')
                     continue
 
+                await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
+
                 for occurrence in occurrences:
+                    await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | получение чата @{occurrence}')
                     try:
                         discussion = await client.get_chat(occurrence)
 
@@ -160,12 +182,16 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                             f' @{member.user.username} [{member.user.id}]')
                         continue
 
+                    await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | обработка чата @{occurrence}')
+
                     async for discussion_member in discussion.get_members():
                         user_chat.members.append(
                             UserResult(id=discussion_member.user.id, username=discussion_member.user.username,
                                        phone=discussion_member.user.phone_number,
                                        first_name=discussion_member.user.first_name,
                                        last_name=discussion_member.user.last_name))
+                        await state.set_state(
+                            f'поиск по мемберу ({k}/{len(members)}) | обработка чата (@{occurrence}) | отправка сообщения (@{discussion_member.user.username})')
                         try:
                             await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
                         except Exception:
