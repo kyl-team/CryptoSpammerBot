@@ -17,8 +17,10 @@ from core.job import storage
 from database import Channel, Account, Proxy
 
 
-def chunks(arr: list, size: int):
-    return [arr[i:i + size] for i in range(0, len(arr), size)]
+def slice_array(arr: list, n: int):
+    k, m = divmod(len(arr), n)
+    slices = [arr[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
+    return slices
 
 
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
@@ -103,6 +105,7 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
         if channel_chat.linked_chat:
             try:
                 await channel_chat.linked_chat.join()
+                await asyncio.sleep(3)
             except Exception:
                 errors.append(f'Не удалось зайти в чат канала')
             members = []
@@ -157,6 +160,7 @@ async def work(client: Client, channels: list[str]) -> WorkResult:
                             errors.append(
                                 f'Не удалось написать пользователю @{discussion_member.user.username} [{discussion_member.user.id}] (беседа @{discussion.username} [{discussion.id}])')
                             continue
+        await asyncio.sleep(5)
     return results
 
 
@@ -194,11 +198,11 @@ async def start(user_id: int):
         proxy_index += 1
 
     if storage.similar:
-        channel_chunks = chunks(list(channels), len(clients))
+        channel_slices = slice_array(list(channels), len(clients))
 
         tasks = []
         for i in range(len(clients)):
-            tasks.append(get_similar_channels(clients[i], channel_chunks[i]))
+            tasks.append(get_similar_channels(clients[i], channel_slices[i]))
 
         channel_groups = await asyncio.gather(*tasks)
 
@@ -206,7 +210,9 @@ async def start(user_id: int):
             for channel in group:
                 channels.add(channel)
 
-    channels_for_clients = chunks(list(channels), len(clients))
+    channels_for_clients = slice_array(list(channels), len(clients))
+
+    print(channels_for_clients)
 
     tasks = []
     for i in range(len(clients)):
