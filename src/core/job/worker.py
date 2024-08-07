@@ -96,7 +96,7 @@ class TaskState:
         self.last_print = None
 
     async def sync(self):
-        if datetime.now() > self.last_print + timedelta(seconds=10):
+        if self.last_print is None or datetime.now() > self.last_print + timedelta(seconds=10):
             state_text = f", {self.state}" if self.state else ""
             await self.message.edit_text(f'⌛ Обработано: {self.progress}/{self.total}{state_text}')
             self.last_print = datetime.now()
