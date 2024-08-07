@@ -48,7 +48,7 @@ async def add_account_manual(query: CallbackQuery, state: FSMContext):
     await query.message.edit_text('<b>Введите номер телефона</b>')
 
 
-@add_router.message(StateFilter(ManualAddGroup.phone), F.text.regexp(re.compile('^[0-9]{11,}$')))
+@add_router.message(StateFilter(ManualAddGroup.phone), F.text.regexp(re.compile(r'^\d+$')))
 async def enter_phone(message: Message, state: FSMContext):
     phone = message.text
 
