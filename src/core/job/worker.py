@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from aiogram.types import BufferedInputFile
+from aiogram.types import BufferedInputFile, Message
 from pydantic import BaseModel
 from pyrofork import Client
 from pyrofork.raw import functions
@@ -87,12 +87,24 @@ class ChannelResult(BaseModel):
     errors: list[str]
 
 
+class TaskState:
+    def __init__(self, message: Message, total: int):
+        self.message = message
+        self.total = total
+        self.progress = 0
+
+    async def update(self):
+        self.progress += 1
+        await self.message.edit_text(f'⌛ Обработано: {self.progress}/{self.total}')
+
+
 WorkResult = list[ChannelResult]
 
 
-async def work(client: Client, channels: list[str]) -> WorkResult:
+async def work(client: Client, channels: list[str], state: TaskState) -> WorkResult:
     results: WorkResult = []
     for channel in channels:
+        await state.update()
         try:
             channel_chat = await client.get_chat(channel)
         except Exception:
@@ -212,11 +224,17 @@ async def start(user_id: int):
 
     channels_for_clients = slice_array(list(channels), len(clients))
 
-    print(channels_for_clients)
+    max_load = max(0, *[len(x) for x in channels_for_clients])
+    if max_load > 20:
+        await bot.send_message(user_id, f'⚠️ Максимальная нагрузка на аккаунт: {max_load} каналов')
+
+    status_message = await bot.send_message(user_id, f'🤖 Задача в процессе')
+
+    state = TaskState(status_message, len(channels))
 
     tasks = []
     for i in range(len(clients)):
-        tasks.append(work(clients[i], channels_for_clients[i]))
+        tasks.append(work(clients[i], channels_for_clients[i], state))
 
     results_arr = await asyncio.gather(*tasks)
     results: list[ChannelResult] = []

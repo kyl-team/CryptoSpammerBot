@@ -1,6 +1,7 @@
 import re
 
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -9,9 +10,10 @@ from database import channel_services, Channel
 menu_router = Router()
 
 
-@menu_router.callback_query(F.data.regexp(re.compile(r'sources(_(clear))?')).as_('match'))
+@menu_router.callback_query(F.data.regexp(re.compile(r'^sources(_(clear))?$')).as_('match'))
 async def menu(query: CallbackQuery, match: re.Match[str]):
-    if match.group(2) == 'clear':
+    action = match.group(2)
+    if action == 'clear':
         await Channel.find().delete()
         await query.answer('✅ Каналы очищены')
 
@@ -31,9 +33,13 @@ async def menu(query: CallbackQuery, match: re.Match[str]):
 
     builder.adjust(*[1] * len(channel_services), 1)
 
-    await query.message.edit_text('<b>Управление каналами</b>\n'
-                                  '\n'
-                                  '⬇️ Загружено:\n'
-                                  f'{loaded_text}'
-                                  f'\n'
-                                  f'<b>Выберите сервис для обновления каналов</b>', reply_markup=builder.as_markup())
+    try:
+        await query.message.edit_text('<b>Управление каналами</b>\n'
+                                      '\n'
+                                      '⬇️ Загружено:\n'
+                                      f'{loaded_text}'
+                                      f'\n'
+                                      f'<b>Выберите сервис для обновления каналов</b>',
+                                      reply_markup=builder.as_markup())
+    except TelegramBadRequest:
+        pass
