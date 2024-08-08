@@ -139,9 +139,10 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
             members = []
             try:
                 async for member in channel_chat.linked_chat.get_members():
-                    if not member.user.is_bot:
-                        members.append(member)
-                        await state.set_state(f'получение мемберов ({len(members)})')
+                    if member.user.is_bot:
+                        continue
+                    members.append(member)
+                    await state.set_state(f'получение мемберов ({len(members)})')
             except Exception:
                 errors.append(
                     f'Не удалось получить список участников чата @{channel_chat.linked_chat.username} [{channel_chat.linked_chat.id}]')
@@ -186,6 +187,9 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
 
                     try:
                         async for discussion_member in discussion.get_members():
+                            if discussion_member.user.is_bot:
+                                continue
+
                             user_chat.members.append(
                                 UserResult(id=discussion_member.user.id, username=discussion_member.user.username,
                                            phone=discussion_member.user.phone_number,
@@ -194,7 +198,8 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                             await state.set_state(
                                 f'поиск по мемберу ({k}/{len(members)}) | обработка чата (@{occurrence}) | отправка сообщения (@{discussion_member.user.username})')
                             try:
-                                await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+                                await client.send_message(discussion_member.user.id,
+                                                          obfuscate_text(storage.message.text))
                             except Exception:
                                 errors.append(
                                     f'Не удалось написать пользователю @{discussion_member.user.username} [{discussion_member.user.id}] (беседа @{discussion.username} [{discussion.id}])')
