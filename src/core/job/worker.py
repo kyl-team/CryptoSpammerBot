@@ -56,7 +56,7 @@ def obfuscate_text(text: str):
     return ' '.join(words)
 
 
-peer_pattern = re.compile(r'@(\w+)')
+peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
 class UserResult(BaseModel):
@@ -171,6 +171,7 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                 await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
 
                 for occurrence in occurrences:
+                    occurrence = occurrence[1] # 2nd match group
                     await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | получение чата @{occurrence}')
                     try:
                         discussion = await client.get_chat(occurrence)
