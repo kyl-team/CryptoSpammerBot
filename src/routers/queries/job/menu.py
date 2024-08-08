@@ -31,8 +31,7 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
             return await query.message.edit_text('<b>Введите сообщение для отправки владельцам бесед</b>',
                                                  reply_markup=get_state_clear_markup())
         case 'start':
-            await job.start(query.from_user.id)
-            return await query.message.edit_text('⌛ <b>Запуск работы...</b>')
+            return await job.start(query.from_user.id)
 
     builder = InlineKeyboardBuilder()
 
