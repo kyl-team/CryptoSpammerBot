@@ -1,5 +1,47 @@
-from .models import WorkResult
+from .models import WorkResult, ChatResult, UserResult, ChannelResult
 from .utils import format_date
+
+
+def format_member(result: UserResult, index: int) -> str:
+    content = ''
+    content += f'{index}. @{result.username} ({result.first_name} {result.last_name}), телефон: {result.phone}, био: "{result.bio}", найдено бесед: {len(result.chats)} [{result.id}]\n'
+    for chat in result.chats:
+        content += format_chat(chat)
+    return content
+
+
+def format_chat(result: ChatResult):
+    content = f'## Чат @{result.username} [{result.id}, {result.depth}]\n'
+
+    if len(result.errors):
+        content += f'### Ошибки\n'
+        for error in result.errors:
+            content += f' * {error}\n'
+
+    content += f'### Чаты\n'
+    i = 0
+    for member in result.members:
+        content += format_member(member, i)
+        i += 1
+
+    return content
+
+
+def format_channel(result: ChannelResult) -> str:
+    content = ''
+
+    content += f'# Канал @{result.name} [{result.id}], беседа: {"есть" if result.linked_chat is not None else "нет"}\n\n'
+    content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
+
+    if len(result.errors):
+        content += '### Ошибки\n'
+        for error in result.errors:
+            content += f' * {error}\n'
+
+    if result.linked_chat:
+        content += format_chat(result.linked_chat)
+
+    return content
 
 
 def format_report(results: WorkResult) -> str:
@@ -7,24 +49,6 @@ def format_report(results: WorkResult) -> str:
     markdown_content = f'# Отчет о работе {timestamp}\n'
 
     for result in results:
-        markdown_content += f'## Канал @{result.name} [{result.id}], беседа: {"есть" if result.has_linked_chat else "нет"}\n\n'
-        markdown_content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
+        markdown_content += format_channel(result)
 
-        if len(result.errors):
-            markdown_content += '### Ошибки\n'
-            for error in result.errors:
-                markdown_content += f' * {error}\n'
-
-        if len(result.members):
-            markdown_content += '### Участники\n'
-            i = 0
-            for member in result.members:
-                markdown_content += f'{i}. @{member.username} ({member.first_name} {member.last_name}), телефон: {member.phone}, био: "{member.bio}", найдено бесед: {len(member.chats)} [{member.id}]\n'
-                for chat in member.chats:
-                    markdown_content += f'    Беседа @{chat.username}, участников: {len(chat.members)}\n'
-                    j = 0
-                    for chat_member in chat.members:
-                        markdown_content += f'        {j}. Участник @{chat_member.username} ({chat_member.first_name} {chat_member.last_name}), телефон: {chat_member.phone} [{chat_member.id}]\n'
-                        j += 1
-                i += 1
     return markdown_content

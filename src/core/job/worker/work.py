@@ -10,8 +10,7 @@ from pyrofork.raw.types.messages import ChatsSlice
 from pyrofork.types import Chat
 
 from core.job import storage
-from .report import WorkResult, UserChatResult, ChannelUserResult, \
-    ChannelResult
+from .report import WorkResult, ChannelResult, ChatResult, UserResult
 from .state import TaskState
 from .utils import obfuscate_text
 
@@ -25,10 +24,18 @@ async def get_similar_channels(client: Client, channels: list[str]) -> list[str]
     return arr
 
 
+async def get_bio(client: Client, user_id: int) -> str | None:
+    user: Any = await client.invoke(
+        functions.users.GetFullUser(id=await client.resolve_peer(user_id)))
+    user: UserFull = user.full_user
+
+    return user.about
+
+
 peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
-async def handle_discussion(client: Client, discussion: Chat, state: TaskState, channel_result: ChannelResult):
+async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult):
     state.known_discussions.add(discussion.username)
     await state.set_state('получение мемберов')
     members = []
@@ -39,26 +46,24 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             members.append(member)
             await state.set_state(f'получение мемберов ({len(members)}/?)')
     except Exception:
-        channel_result.errors.append(
+        chat_result.errors.append(
             f'Не удалось получить список участников чата @{discussion.username} [{discussion.id}]')
 
     for k in range(len(members)):
         member = members[k]
         await state.set_state(f'обработка мембера ({k}/{len(members)})')
         try:
-            user: Any = await client.invoke(
-                functions.users.GetFullUser(id=await client.resolve_peer(member.user.id)))
-            user: UserFull = user.full_user
+            bio = await get_bio(client, member.user.id)
 
-            user_result = ChannelUserResult(id=member.user.id, username=member.user.username,
-                                            phone=member.user.phone_number,
-                                            first_name=member.user.first_name, last_name=member.user.last_name,
-                                            bio=user.about)
-            channel_result.members.append(user_result)
+            user_result = UserResult(id=member.user.id, username=member.user.username,
+                                     phone=member.user.phone_number,
+                                     first_name=member.user.first_name, last_name=member.user.last_name,
+                                     bio=bio)
+            chat_result.members.append(user_result)
 
-            occurrences = peer_pattern.findall(user.about)
+            occurrences = peer_pattern.findall(bio)
         except Exception:
-            channel_result.errors.append(
+            chat_result.errors.append(
                 f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}]')
             continue
 
@@ -69,49 +74,55 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                 await client.send_message(member.user.id,
                                           obfuscate_text(storage.message.text))
             except Exception:
-                channel_result.errors.append(
+                chat_result.errors.append(
                     f'Не удалось написать участнику @{member.user.username} [{member.user.id}]')
 
         for occurrence in occurrences:
+            occurrence = occurrence[1]  # 2nd match group
+
             if occurrence in state.known_discussions:
                 continue
 
-            occurrence = occurrence[1]  # 2nd match group
             await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | получение чата @{occurrence}')
+
             try:
                 new_discussion = await client.get_chat(occurrence)
 
-                user_chat = UserChatResult(username=occurrence)
+                user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
                 user_result.chats.append(user_chat)
             except Exception:
-                channel_result.errors.append(
+                chat_result.errors.append(
                     f'Не удалось получить пользовательский чат @{occurrence} пользователя'
                     f' @{member.user.username} [{member.user.id}]')
                 continue
-            await handle_discussion(client, new_discussion, state, channel_result)
+
+            await handle_discussion(client, new_discussion, state, user_chat)
 
 
 async def work(client: Client, channels: list[str], state: TaskState) -> WorkResult:
     results: WorkResult = []
     for channel in channels:
         await state.start_channel()
+
+        channel_result = ChannelResult(id=-1, name=channel,
+                                       client_name=client.name, client_proxy=client.proxy)
+        results.append(channel_result)
+
         try:
             channel_chat = await client.get_chat(channel)
         except Exception:
+            channel_result.errors.append(f'Не удалось найти канал @{channel}')
             continue
-        errors = []
-        channel_result = ChannelResult(id=channel_chat.id, name=channel, has_linked_chat=bool(channel_chat.linked_chat),
-                                       client_name=client.name, client_proxy=client.proxy, errors=errors)
-        results.append(channel_result)
 
         if channel_chat.linked_chat:
+            channel_result.linked_chat = ChatResult(username=channel_chat.linked_chat.username,
+                                                    id=channel_chat.linked_chat.id)
             await state.set_state('вход в беседу')
             try:
                 await channel_chat.linked_chat.join()
-                await asyncio.sleep(3)
             except Exception:
-                errors.append(f'Не удалось зайти в чат канала')
+                channel_result.errors.append(f'Не удалось зайти в чат канала')
 
-            await handle_discussion(client, channel_chat, state, channel_result)
+            await handle_discussion(client, channel_chat, state, channel_result.linked_chat)
         await asyncio.sleep(5)
     return results
