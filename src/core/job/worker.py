@@ -184,20 +184,23 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
 
                     await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | обработка чата @{occurrence}')
 
-                    async for discussion_member in discussion.get_members():
-                        user_chat.members.append(
-                            UserResult(id=discussion_member.user.id, username=discussion_member.user.username,
-                                       phone=discussion_member.user.phone_number,
-                                       first_name=discussion_member.user.first_name,
-                                       last_name=discussion_member.user.last_name))
-                        await state.set_state(
-                            f'поиск по мемберу ({k}/{len(members)}) | обработка чата (@{occurrence}) | отправка сообщения (@{discussion_member.user.username})')
-                        try:
-                            await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
-                        except Exception:
-                            errors.append(
-                                f'Не удалось написать пользователю @{discussion_member.user.username} [{discussion_member.user.id}] (беседа @{discussion.username} [{discussion.id}])')
-                            continue
+                    try:
+                        async for discussion_member in discussion.get_members():
+                            user_chat.members.append(
+                                UserResult(id=discussion_member.user.id, username=discussion_member.user.username,
+                                           phone=discussion_member.user.phone_number,
+                                           first_name=discussion_member.user.first_name,
+                                           last_name=discussion_member.user.last_name))
+                            await state.set_state(
+                                f'поиск по мемберу ({k}/{len(members)}) | обработка чата (@{occurrence}) | отправка сообщения (@{discussion_member.user.username})')
+                            try:
+                                await client.send_message(discussion_member.user.id, obfuscate_text(storage.message.text))
+                            except Exception:
+                                errors.append(
+                                    f'Не удалось написать пользователю @{discussion_member.user.username} [{discussion_member.user.id}] (беседа @{discussion.username} [{discussion.id}])')
+                                continue
+                    except Exception:
+                        errors.append(f'Не удалось получить мемберов дискуссии (@{discussion.username})')
         await asyncio.sleep(5)
     return results
 
