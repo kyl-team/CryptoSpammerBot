@@ -68,9 +68,15 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
             if not data or 'session_id' not in data:
                 raise ValueError('Missing session_id')
 
-            session_id = data['session_id']
-
-            raise NotImplementedError('WIP')
+            for channel in ['stukach_trading', 'telecrypto_ua', 'joinchat', 'cryptozarr', 'sharktradeandcrypto',
+                            'ukripta', 'enjoy_crypto_guild', 'cryptoukrainian7', 'crypto_salo', 'lwallet_channel',
+                            'jabascript', 'cryptocristalll', 'cryptosscamm', 'just_invest44', 'nikeyl', 'crypto_k_s',
+                            'cryptobelief', 'joinchat', 'crossirpin', 'cryptofox_me', 'satoshinakamotocrypto1',
+                            'crypto_klauss', 'cryptomillionersx', 'proskura_crypto', 'ffvan_crypto', 'cryptocrowfeeds',
+                            'cruptoukrop', 'ukrypti', 'lutaemcrypto', 'money_for_pizza', 'crypto_svit',
+                            'varenik14crypto', 'bodry_finance_blog', 'cryptokraina', 'cit_group', 'treading_book',
+                            'crypto_xpert4you', 'rozhok_crypto']:
+                channels.add(channel)
         case _:
             raise ValueError(f'Unknown service: {service}')
 
