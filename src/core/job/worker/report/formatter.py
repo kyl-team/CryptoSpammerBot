@@ -38,7 +38,7 @@ def format_channel(result: ChannelResult) -> str:
         for error in result.errors:
             content += f' * {error}\n'
 
-    if result.linked_chat:
+    if result.linked_chat is not None:
         content += format_chat(result.linked_chat)
 
     return content

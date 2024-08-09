@@ -3,16 +3,15 @@ import re
 from typing import Any
 
 from pyrofork import Client
+from pyrofork.errors import RPCError
 from pyrofork.raw import functions
 from pyrofork.raw.functions.channels import GetChannelRecommendations
 from pyrofork.raw.types import UserFull
 from pyrofork.raw.types.messages import ChatsSlice
 from pyrofork.types import Chat
 
-from core.job import storage
 from .report import WorkResult, ChannelResult, ChatResult, UserResult
 from .state import TaskState
-from .utils import obfuscate_text
 
 
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
@@ -71,8 +70,9 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
         if len(occurrences) > 0:
             try:
-                await client.send_message(member.user.id,
-                                          obfuscate_text(storage.message.text))
+                pass
+                # await client.send_message(member.user.id,
+                #                           obfuscate_text(storage.message.text))
             except Exception:
                 chat_result.errors.append(
                     f'Не удалось написать участнику @{member.user.username} [{member.user.id}]')
@@ -110,8 +110,11 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
 
         try:
             channel_chat = await client.get_chat(channel)
-        except Exception:
-            channel_result.errors.append(f'Не удалось найти канал @{channel}')
+        except RPCError as e:
+            channel_result.errors.append(f'Ошибка получения канала @{channel}, ответ: {e.ID or e.NAME}')
+            continue
+        except Exception as e:
+            channel_result.errors.append(f'Неизвестная ошибка получения канала @{channel}, {type(e).__name__}')
             continue
 
         if channel_chat.linked_chat:
