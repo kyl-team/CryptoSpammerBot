@@ -25,9 +25,9 @@ async def update_source(query: CallbackQuery, match: re.Match[str], state: FSMCo
     if service not in channel_services:
         return await query.answer('❌ Сервис не найден', show_alert=True)
 
-    if service == 'telemetr.me':
-        await state.set_state(UpdateServiceStates.php_session)
-        return await query.message.edit_text('<b>Введите PHPSESSID</b>', reply_markup=get_state_clear_markup())
+    # if service == 'telemetr.me':
+    #     await state.set_state(UpdateServiceStates.php_session)
+    #     return await query.message.edit_text('<b>Введите PHPSESSID</b>', reply_markup=get_state_clear_markup())
 
     await query.message.edit_text('⌛ Ожидайте')
     count = await update_channels(service)
