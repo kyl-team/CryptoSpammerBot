@@ -70,7 +70,7 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
         await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
 
-        if len(occurrences) > 0:
+        if len(occurrences) > 0 and not storage.draft:
             try:
                 await client.send_message(member.user.id,
                                           obfuscate_text(storage.message.text))

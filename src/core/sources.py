@@ -65,9 +65,6 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
                     for element in elements:
                         channels.add(element.text)
         case 'telemetr.me':
-            if not data or 'session_id' not in data:
-                raise ValueError('Missing session_id')
-
             for channel in ['stukach_trading', 'telecrypto_ua', 'joinchat', 'cryptozarr', 'sharktradeandcrypto',
                             'ukripta', 'enjoy_crypto_guild', 'cryptoukrainian7', 'crypto_salo', 'lwallet_channel',
                             'jabascript', 'cryptocristalll', 'cryptosscamm', 'just_invest44', 'nikeyl', 'crypto_k_s',

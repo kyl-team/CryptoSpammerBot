@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import job
+from database import Account
 from ..state_clear import get_state_clear_markup
 
 
@@ -26,6 +27,9 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
         case 'similar':
             job.storage.similar = not job.storage.similar
             await job.storage.save()
+        case 'draft':
+            job.storage.draft = not job.storage.draft
+            await job.storage.save()
         case 'edit':
             await state.set_state(JobMessageStates.edit)
             return await query.message.edit_text('<b>Введите сообщение для отправки владельцам бесед</b>',
@@ -35,17 +39,38 @@ async def menu(query: CallbackQuery, state: FSMContext, match: re.Match[str]):
 
     builder = InlineKeyboardBuilder()
 
-    builder.button(text='✏️ Редактировать сообщение', callback_data='job_edit')
+    warnings = ''
+
+    if len(job.storage.message.text) > 0:
+        builder.button(text='✏️ Редактировать сообщение', callback_data='job_edit')
+    else:
+        builder.button(text='✏️ Установить сообщение', callback_data='job_edit')
+
     if job.storage.similar:
         builder.button(text='Искать похожие ✅', callback_data='job_similar')
     else:
         builder.button(text='Искать похожие ❌', callback_data='job_similar')
+    if job.storage.draft:
+        builder.button(text='Только сбор данных 📄', callback_data='job_draft')
+    else:
+        builder.button(text='Стандартный ✍️', callback_data='job_draft')
+
+        if len(job.storage.message.text) == 0:
+            warnings += '⚠️ Вы не можете использовать этот режим, пока не установлен текст сообщения\n'
     builder.button(text='🔙 Назад', callback_data='start')
-    builder.button(text='🚀 Запуск', callback_data='job_start')
 
-    builder.adjust(1, 1, 2)
+    accounts = await Account.count()
 
-    await query.message.edit_text('<b>Создание задания</b>', reply_markup=builder.as_markup())
+    if accounts == 0:
+        warnings += '⚠️ Вы не можете запустить работу, поскольку в боте недостаточно аккаунтов!\n'
+
+    if len(warnings) == 0:
+        builder.button(text='🚀 Запуск', callback_data='job_start')
+
+    builder.adjust(1, 2, 2)
+
+    await query.message.edit_text('<b>Создание задания</b>\n\n'
+                                  f'{warnings}', reply_markup=builder.as_markup())
 
 
 @menu_router.message(StateFilter(JobMessageStates.edit), F.text)

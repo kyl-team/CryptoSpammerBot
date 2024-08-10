@@ -1,7 +1,7 @@
 import asyncio
 
 from aiogram.types import BufferedInputFile
-from pyrofork import Client
+from pyrofork.errors import RPCError
 
 from bot import bot
 from core.job import storage
@@ -10,6 +10,7 @@ from .report import WorkResult, format_date, format_report
 from .state import TaskState
 from .utils import slice_array
 from .work import get_similar_channels, work
+from ...accounts import get_client
 
 
 async def start(user_id: int):
@@ -35,14 +36,14 @@ async def start(user_id: int):
             }
         else:
             proxy_data = None
-        client = Client(
-            name=account.phone,
-            proxy=proxy_data,
-            session_string=account.session,
-            in_memory=True
-        )
+        client = get_client(account.phone, proxy=proxy_data, session_string=account.session)
         clients.append(client)
-        await client.connect()
+        try:
+            await client.connect()
+        except RPCError as e:
+            await bot.send_message(user_id,
+                                   f'❌ Не удалось подключится к аккаунту <code>{account.phone}</code>, <b>[{e.CODE} {e.ID}]</b> <i>{e.MESSAGE}</i>. Попробуйте снова, или удалите и войдите в аккаунт заново.')
+            return
         proxy_index += 1
 
     if storage.similar:

@@ -9,6 +9,7 @@ class JobMessage(BaseModel):
 
 class JobStorage(BaseStorage):
     similar: bool = True
+    draft: bool = False
     message: JobMessage = JobMessage()
 
     @property
