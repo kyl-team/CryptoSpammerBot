@@ -12,6 +12,8 @@ from pyrofork.types import Chat
 
 from .report import WorkResult, ChannelResult, ChatResult, UserResult
 from .state import TaskState
+from .utils import obfuscate_text
+from .. import storage
 
 
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
@@ -70,9 +72,8 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
         if len(occurrences) > 0:
             try:
-                pass
-                # await client.send_message(member.user.id,
-                #                           obfuscate_text(storage.message.text))
+                await client.send_message(member.user.id,
+                                          obfuscate_text(storage.message.text))
             except Exception:
                 chat_result.errors.append(
                     f'Не удалось написать участнику @{member.user.username} [{member.user.id}]')
