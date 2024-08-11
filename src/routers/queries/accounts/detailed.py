@@ -10,7 +10,7 @@ from database import Account
 detailed_router = Router()
 
 
-@detailed_router.callback_query(F.data.regexp(re.compile(r'^accounts_(\d+)(_(\w+))?$')).as_('match'))
+@detailed_router.callback_query(F.data.regexp(re.compile(r'^accounts_(\d+)(_(delete))?$')).as_('match'))
 async def get_detailed_account(query: CallbackQuery, match: re.Match[str]):
     user_id, action = match.group(1, 3)
     account = await Account.find_one(Account.user_id == int(user_id))

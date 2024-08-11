@@ -38,12 +38,13 @@ async def start(user_id: int):
             proxy_data = None
         client = get_client(account.phone, proxy=proxy_data, session_string=account.session)
         clients.append(client)
-        try:
-            await client.connect()
-        except RPCError as e:
-            await bot.send_message(user_id,
-                                   f'❌ Не удалось подключится к аккаунту <code>{account.phone}</code>, <b>[{e.CODE} {e.ID}]</b> <i>{e.MESSAGE}</i>. Попробуйте снова, или удалите и войдите в аккаунт заново.')
-            return
+        if not client.is_connected:
+            try:
+                await client.connect()
+            except RPCError as e:
+                await bot.send_message(user_id,
+                                       f'❌ Не удалось подключится к аккаунту <code>{account.phone}</code>, <b>[{e.CODE} {e.ID}]</b> <i>{e.MESSAGE}</i>. Попробуйте снова, или удалите и войдите в аккаунт заново.')
+                return
         proxy_index += 1
 
     if storage.similar:
