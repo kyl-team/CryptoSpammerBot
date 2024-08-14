@@ -31,7 +31,8 @@ def format_channel(result: ChannelResult) -> str:
     content = ''
 
     content += f'# Канал @{result.name} [{result.id}], беседа: {"есть" if result.linked_chat is not None else "нет"}\n\n'
-    content += f'Обработчик: {result.client_name}, прокси: {result.client_proxy["hostname"]}:{result.client_proxy["port"]}\n\n'
+    proxy_text = f'{result.client_proxy["hostname"]}:{result.client_proxy["port"]}' if result.client_proxy else 'нет'
+    content += f'Обработчик: {result.client_name}, прокси: {proxy_text}\n\n'
 
     if len(result.errors):
         content += '### Ошибки\n'

@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pyrofork.errors import SessionPasswordNeeded, PhoneCodeExpired
 
+from config import config
 from core.accounts import get_client
 from database import Account
 from ..state_clear import get_state_clear_markup
@@ -52,8 +53,14 @@ async def add_account_manual(query: CallbackQuery, state: FSMContext):
 async def enter_phone(message: Message, state: FSMContext):
     phone = message.text
 
+    await state.clear()
+
     if await Account.find_one(Account.phone == phone):
         return await message.reply('❌ Аккаунт с этим номером уже добавлен', reply_markup=get_back_markup())
+
+    if config.session.api_id == '' or config.session.api_hash == '':
+        return await message.reply('❌ Установите параметры сессии, чтобы добавлять новые аккаунты',
+                                   reply_markup=get_back_markup())
 
     client = get_client(phone)
     if client.is_connected:

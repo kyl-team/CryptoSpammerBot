@@ -13,6 +13,8 @@ class BaseStorage(BaseModel, ABC):
                 super().__init__(**json.load(f))
         else:
             super().__init__()
+            with open(self.pathname, 'w', encoding='utf-8') as f:
+                json.dump(self.model_dump(), f, sort_keys=True, indent=4, ensure_ascii=True)
 
     @property
     def pathname(self):

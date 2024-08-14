@@ -5,13 +5,13 @@ from contextlib import suppress
 
 import bot
 import database
-from routers import commands_router, queries_router
+from routers import commands_router, queries_router, error_router
 
 logging.getLogger('pymongo').setLevel(logging.WARNING)
 logging.getLogger('pyrofork').setLevel(logging.WARNING)
 logging.basicConfig(level=logging.DEBUG)
 
-bot.dp.include_routers(commands_router, queries_router)
+bot.dp.include_routers(commands_router, queries_router, error_router)
 
 
 async def main():

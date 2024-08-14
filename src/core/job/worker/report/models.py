@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class ChatResult(BaseModel):
     id: int
-    username: str
+    username: str | None
     members: list["UserResult"] = []
     errors: list[str] = []
     depth: int = 0
@@ -25,7 +25,7 @@ class ChannelResult(BaseModel):
     id: int
     name: str
     client_name: str
-    client_proxy: dict[str, Any]
+    client_proxy: dict[str, Any] | None
     linked_chat: ChatResult | None = None
     errors: list[str] = []
 

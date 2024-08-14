@@ -3,6 +3,7 @@ import re
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from pyrofork.errors import RPCError
 
 from core.accounts import get_client
 from database import Account
@@ -30,7 +31,10 @@ async def get_detailed_account(query: CallbackQuery, match: re.Match[str]):
 
     client = get_client(account.phone, session_string=account.session)
     if not client.is_connected:
-        await client.connect()
+        try:
+            await client.connect()
+        except RPCError:
+            await query.answer('❌ Не удалось войти в аккаунт', show_alert=True)
 
     await query.message.edit_text(f'<b>Аккаунт @{account.username} [<code>{account.user_id}</code>]</b>\n'
                                   f'\n'
