@@ -47,8 +47,14 @@ peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
 async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult) -> None:
+    if discussion.username in state.known_discussions:
+        return
+
     logging.info(discussion.username)
+    logging.info(state.known_discussions)
+
     state.known_discussions.add(discussion.username)
+
     await state.set_state('получение мемберов')
     members = []
     try:
