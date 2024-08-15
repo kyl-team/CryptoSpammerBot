@@ -123,12 +123,13 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
         if channel_chat.linked_chat:
             channel_result.linked_chat = ChatResult(username=channel_chat.linked_chat.username,
                                                     id=channel_chat.linked_chat.id)
-            await state.set_state('вход в беседу')
-            try:
-                await channel_chat.linked_chat.join()
-            except Exception as e:
-                channel_result.errors.append(
-                    f'Не удалось зайти в чат канала ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
+            if not storage.draft:
+                await state.set_state('вход в беседу')
+                try:
+                    await channel_chat.linked_chat.join()
+                except Exception as e:
+                    channel_result.errors.append(
+                        f'Не удалось зайти в чат канала ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
 
             await handle_discussion(client, channel_chat, state, channel_result.linked_chat)
         await asyncio.sleep(5)
