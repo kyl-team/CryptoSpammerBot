@@ -100,6 +100,7 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
 async def work(client: Client, channels: list[str], state: TaskState) -> WorkResult:
     results: WorkResult = []
+    a = 0
     for channel in channels:
         await state.start_channel()
 
@@ -128,4 +129,7 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                         f'Не удалось зайти в чат канала. {format_exception(e)}')
 
             await handle_discussion(client, channel_chat.linked_chat, state, channel_result.linked_chat)
+        a += 1
+        if a >= 8:
+            break
     return results
