@@ -1,8 +1,11 @@
+import asyncio
 import re
 from typing import Any
 
 from pyrofork import Client
+from pyrofork.errors import FloodWait
 from pyrofork.raw import functions
+from pyrofork.raw.core import TLObject
 from pyrofork.raw.functions.channels import GetChannelRecommendations
 from pyrofork.raw.types import UserFull
 from pyrofork.raw.types.messages import ChatsSlice
@@ -14,18 +17,26 @@ from .utils import obfuscate_text, format_exception
 from .. import storage
 
 
+async def safe_invoke(client: Client, query: TLObject, *args, **kwargs) -> Any:
+    while True:
+        try:
+            return await client.invoke(query, *args, **kwargs)
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+
+
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
     arr = []
     for channel in channels:
-        similar: ChatsSlice = await client.invoke(
-            GetChannelRecommendations(channel=await client.resolve_peer(channel)))
+        similar: ChatsSlice = await safe_invoke(client,
+                                                GetChannelRecommendations(channel=await client.resolve_peer(channel)))
         arr += [item.username for item in similar.chats]
     return arr
 
 
 async def get_bio(client: Client, user_id: int) -> str | None:
-    user: Any = await client.invoke(
-        functions.users.GetFullUser(id=await client.resolve_peer(user_id)))
+    user: Any = await safe_invoke(client,
+                                  functions.users.GetFullUser(id=await client.resolve_peer(user_id)))
     user: UserFull = user.full_user
 
     return user.about
@@ -34,7 +45,7 @@ async def get_bio(client: Client, user_id: int) -> str | None:
 peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
-async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult):
+async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult) -> None:
     state.known_discussions.add(discussion.username)
     await state.set_state('получение мемберов')
     members = []
@@ -53,18 +64,21 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
         await state.set_state(f'обработка мембера ({k}/{len(members)})')
         try:
             bio = await get_bio(client, member.user.id)
-
-            user_result = UserResult(id=member.user.id, username=member.user.username,
-                                     phone=member.user.phone_number,
-                                     first_name=member.user.first_name, last_name=member.user.last_name,
-                                     bio=bio)
-            chat_result.members.append(user_result)
-
-            occurrences = peer_pattern.findall(bio)
         except Exception as e:
             chat_result.errors.append(
                 f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}]. {format_exception(e)}')
             continue
+
+        user_result = UserResult(id=member.user.id, username=member.user.username,
+                                 phone=member.user.phone_number,
+                                 first_name=member.user.first_name, last_name=member.user.last_name,
+                                 bio=bio)
+        chat_result.members.append(user_result)
+
+        if not bio:
+            return
+
+        occurrences = peer_pattern.findall(bio)
 
         await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
 
@@ -86,14 +100,14 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
             try:
                 new_discussion = await client.get_chat(occurrence)
-
-                user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
-                user_result.chats.append(user_chat)
             except Exception as e:
                 chat_result.errors.append(
                     f'Не удалось получить пользовательский чат @{occurrence} пользователя'
                     f' @{member.user.username} [{member.user.id}]. {format_exception(e)}')
                 continue
+
+            user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
+            user_result.chats.append(user_chat)
 
             await handle_discussion(client, new_discussion, state, user_chat)
 
