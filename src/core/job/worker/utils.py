@@ -1,4 +1,7 @@
 import random
+import traceback
+
+from pyrofork.errors import RPCError
 
 
 def slice_array(arr: list, n: int):
@@ -29,3 +32,10 @@ def obfuscate_text(text: str):
         else:
             words.append(word)
     return ' '.join(words)
+
+
+def format_exception(e: Exception) -> str:
+    if isinstance(e, RPCError):
+        return f'Telegram RPCError ({e.NAME}) <b>[{e.CODE} {e.ID}]</b> <i>{e.MESSAGE}</i>'
+
+    return f'{type(e).__name__} ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")'

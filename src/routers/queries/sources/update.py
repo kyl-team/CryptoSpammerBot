@@ -9,7 +9,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core.sources import update_channels
 from database import channel_services
-from ..state_clear import get_state_clear_markup
 
 update_router = Router()
 
