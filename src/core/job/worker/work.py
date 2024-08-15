@@ -154,6 +154,6 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
 
             await handle_discussion(client, channel_chat.linked_chat, state, channel_result.linked_chat)
         a += 1
-        if a >= 4:
+        if a >= 8:
             break
     return results
