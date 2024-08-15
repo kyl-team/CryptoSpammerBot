@@ -18,11 +18,10 @@ def format_chat(result: ChatResult):
         for error in result.errors:
             content += f' * {error}\n'
 
-    content += f'### Чаты\n'
-    i = 0
-    for member in result.members:
-        content += format_member(member, i)
-        i += 1
+    if len(result.members):
+        content += f'### Участники\n'
+        for i in range(len(result.members)):
+            content += format_member(result.members[i], i)
 
     return content
 

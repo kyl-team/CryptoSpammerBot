@@ -1,5 +1,6 @@
 import asyncio
 import re
+import traceback
 from typing import Any
 
 from pyrofork import Client
@@ -46,9 +47,9 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                 continue
             members.append(member)
             await state.set_state(f'получение мемберов ({len(members)}/?)')
-    except Exception:
+    except Exception as e:
         chat_result.errors.append(
-            f'Не удалось получить список участников чата @{discussion.username} [{discussion.id}]')
+            f'Не удалось получить список участников чата @{discussion.username} [{discussion.id}] ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
 
     for k in range(len(members)):
         member = members[k]
@@ -63,9 +64,9 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             chat_result.members.append(user_result)
 
             occurrences = peer_pattern.findall(bio)
-        except Exception:
+        except Exception as e:
             chat_result.errors.append(
-                f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}]')
+                f'Не удалось получить информацию по участнику @{member.user.username} [{member.user.id}] ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
             continue
 
         await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
@@ -74,9 +75,9 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             try:
                 await client.send_message(member.user.id,
                                           obfuscate_text(storage.message.text))
-            except Exception:
+            except Exception as e:
                 chat_result.errors.append(
-                    f'Не удалось написать участнику @{member.user.username} [{member.user.id}]')
+                    f'Не удалось написать участнику @{member.user.username} [{member.user.id}] ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
 
         for occurrence in occurrences:
             occurrence = occurrence[1]  # 2nd match group
@@ -91,10 +92,10 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
 
                 user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
                 user_result.chats.append(user_chat)
-            except Exception:
+            except Exception as e:
                 chat_result.errors.append(
                     f'Не удалось получить пользовательский чат @{occurrence} пользователя'
-                    f' @{member.user.username} [{member.user.id}]')
+                    f' @{member.user.username} [{member.user.id}] ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
                 continue
 
             await handle_discussion(client, new_discussion, state, user_chat)
@@ -115,7 +116,8 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
             channel_result.errors.append(f'Ошибка получения канала @{channel}, ответ: {e.ID or e.NAME}')
             continue
         except Exception as e:
-            channel_result.errors.append(f'Неизвестная ошибка получения канала @{channel}, {type(e).__name__}')
+            channel_result.errors.append(
+                f'Неизвестная ошибка получения канала @{channel}, {type(e).__name__} ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
             continue
 
         if channel_chat.linked_chat:
@@ -124,8 +126,9 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
             await state.set_state('вход в беседу')
             try:
                 await channel_chat.linked_chat.join()
-            except Exception:
-                channel_result.errors.append(f'Не удалось зайти в чат канала')
+            except Exception as e:
+                channel_result.errors.append(
+                    f'Не удалось зайти в чат канала ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
 
             await handle_discussion(client, channel_chat, state, channel_result.linked_chat)
         await asyncio.sleep(5)
