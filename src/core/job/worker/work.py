@@ -120,6 +120,8 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
                 f'Неизвестная ошибка получения канала @{channel}, {type(e).__name__} ({type(e).__name__}, "{"\n".join(traceback.format_exception(e))}")')
             continue
 
+        channel_result.id = channel_chat.id
+
         if channel_chat.linked_chat:
             channel_result.linked_chat = ChatResult(username=channel_chat.linked_chat.username,
                                                     id=channel_chat.linked_chat.id)
