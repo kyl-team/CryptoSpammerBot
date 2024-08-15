@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 from typing import Any
 
@@ -46,11 +47,14 @@ peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
 async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult) -> None:
+    logging.info(discussion.username)
     state.known_discussions.add(discussion.username)
     await state.set_state('получение мемберов')
     members = []
     try:
         async for member in discussion.get_members():
+            if state.stop_signal:
+                break
             if member.user.is_bot:
                 continue
             members.append(member)
@@ -60,6 +64,8 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             f'Не удалось получить список участников чата @{discussion.username} [{discussion.id}]. {format_exception(e)}')
 
     for k in range(len(members)):
+        if state.stop_signal:
+            break
         member = members[k]
         await state.set_state(f'обработка мембера ({k}/{len(members)})')
         try:
@@ -91,6 +97,8 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                     f'Не удалось написать участнику @{member.user.username} [{member.user.id}]. {format_exception(e)}')
 
         for occurrence in occurrences:
+            if state.stop_signal:
+                break
             occurrence = occurrence[1]  # 2nd match group
 
             if occurrence in state.known_discussions:
@@ -116,6 +124,8 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
     results: WorkResult = []
     a = 0
     for channel in channels:
+        if state.stop_signal:
+            break
         await state.start_channel()
 
         channel_result = ChannelResult(id=-1, name=channel,
@@ -144,6 +154,6 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
 
             await handle_discussion(client, channel_chat.linked_chat, state, channel_result.linked_chat)
         a += 1
-        if a >= 8:
+        if a >= 4:
             break
     return results

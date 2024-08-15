@@ -1,13 +1,15 @@
 import asyncio
 
 from aiogram.types import BufferedInputFile
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pyrofork.errors import RPCError
 
 from bot import bot
 from core.job import storage
 from database import Account, Proxy, Channel
+from . import online
 from .report import WorkResult, format_date, format_report
-from .state import TaskState
+from .state import TaskState, generate_state_id
 from .utils import slice_array
 from .work import get_similar_channels, work
 from ...accounts import get_client
@@ -66,9 +68,17 @@ async def start(user_id: int):
     if max_load > 20:
         await bot.send_message(user_id, f'⚠️ Максимальная нагрузка на аккаунт: {max_load} каналов')
 
-    status_message = await bot.send_message(user_id, f'🤖 Задача в процессе')
+    state_id = generate_state_id()
+
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text='❌ Остановить', callback_data=f'job_stop_{state_id}')
+
+    status_message = await bot.send_message(user_id, f'🤖 Задача в процессе', reply_markup=builder.as_markup())
 
     state = TaskState(status_message, len(channels))
+
+    online.states[state_id] = state
 
     tasks = []
     for i in range(len(clients)):

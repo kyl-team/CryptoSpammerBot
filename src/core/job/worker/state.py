@@ -1,6 +1,12 @@
+import random
+import string
 from datetime import datetime, timedelta
 
 from aiogram.types import Message
+
+
+def generate_state_id() -> str:
+    return ''.join(random.choices(string.digits + string.ascii_lowercase, k=8))
 
 
 class TaskState:
@@ -10,6 +16,7 @@ class TaskState:
         self.known_discussions = set()
         self.progress = 0
         self.state = None
+        self.stop_signal = False
         self.last_print = None
 
     async def sync(self):
@@ -26,3 +33,6 @@ class TaskState:
     async def set_state(self, state: str):
         self.state = state
         await self.sync()
+
+    def stop(self):
+        self.stop_signal = True
