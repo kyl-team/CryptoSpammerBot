@@ -47,13 +47,13 @@ peer_pattern = re.compile(r'(@|t\.me/)(\w+)')
 
 
 async def handle_discussion(client: Client, discussion: Chat, state: TaskState, chat_result: ChatResult) -> None:
-    if discussion.username in state.known_discussions:
+    if discussion.id in state.known_discussions:
         return
 
-    logging.info(discussion.username)
+    logging.info(discussion.id)
     logging.info(state.known_discussions)
 
-    state.known_discussions.add(discussion.username)
+    state.known_discussions.add(discussion.id)
 
     await state.set_state('получение мемберов')
     members = []
@@ -106,9 +106,6 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             if state.stop_signal:
                 break
             occurrence = occurrence[1]  # 2nd match group
-
-            if occurrence in state.known_discussions:
-                continue
 
             await state.set_state(f'поиск по мемберу ({k}/{len(members)}) | получение чата @{occurrence}')
 
