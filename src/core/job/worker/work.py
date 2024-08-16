@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from pyrofork import Client
+from pyrofork.enums import ChatType
 from pyrofork.errors import FloodWait
 from pyrofork.raw import functions
 from pyrofork.raw.core import TLObject
@@ -117,8 +118,11 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                     f' @{member.user.username} [{member.user.id}]. {format_exception(e)}')
                 continue
 
-            if new_discussion.linked_chat:
-                new_discussion = new_discussion.linked_chat
+            if new_discussion.type == ChatType.CHANNEL:
+                if new_discussion.linked_chat:
+                    new_discussion = new_discussion.linked_chat
+                else:
+                    continue
 
             user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
             user_result.chats.append(user_chat)
