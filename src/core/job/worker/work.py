@@ -117,6 +117,9 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                     f' @{member.user.username} [{member.user.id}]. {format_exception(e)}')
                 continue
 
+            if new_discussion.linked_chat:
+                new_discussion = new_discussion.linked_chat
+
             user_chat = ChatResult(username=occurrence, id=new_discussion.id, depth=chat_result.depth + 1)
             user_result.chats.append(user_chat)
 
