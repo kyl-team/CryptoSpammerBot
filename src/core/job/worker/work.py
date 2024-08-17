@@ -138,6 +138,10 @@ async def work(client: Client, channels: list[str], state: TaskState) -> WorkRes
     for channel in channels:
         if state.stop_signal:
             break
+
+        if channel is None:
+            continue
+
         await state.start_channel()
 
         channel_result = ChannelResult(id=-1, name=channel,
