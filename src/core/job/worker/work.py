@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+from contextlib import suppress
 from typing import Any
 
 from pyrofork import Client
@@ -30,9 +31,11 @@ async def safe_invoke(client: Client, query: TLObject, *args, **kwargs) -> Any:
 async def get_similar_channels(client: Client, channels: list[str]) -> list[str]:
     arr = []
     for channel in channels:
-        similar: ChatsSlice = await safe_invoke(client,
-                                                GetChannelRecommendations(channel=await client.resolve_peer(channel)))
-        arr += [item.username for item in similar.chats]
+        with suppress(Exception):
+            similar: ChatsSlice = await safe_invoke(client,
+                                                    GetChannelRecommendations(
+                                                        channel=await client.resolve_peer(channel)))
+            arr += [item.username for item in similar.chats]
     return arr
 
 

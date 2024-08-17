@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core.sources import update_channels
-from database import channel_services
+from database import channel_services, Proxy
 
 update_router = Router()
 
@@ -27,6 +27,10 @@ async def update_source(query: CallbackQuery, match: re.Match[str], state: FSMCo
     # if service == 'telemetr.me':
     #     await state.set_state(UpdateServiceStates.php_session)
     #     return await query.message.edit_text('<b>Введите PHPSESSID</b>', reply_markup=get_state_clear_markup())
+
+    if service == 'telemetr.io':
+        if await Proxy.count() == 0:
+            return await query.answer('❌ Не удалось обновить Telemetr.io, нужно добавить прокси', show_alert=True)
 
     await query.message.edit_text('⌛ Ожидайте')
     count = await update_channels(service)

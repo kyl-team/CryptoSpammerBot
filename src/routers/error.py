@@ -19,11 +19,13 @@ async def error_handler(e: ErrorEvent):
     if e.update.callback_query:
         user = e.update.callback_query.from_user
         update_info = f'Пользователь: @{user.username} [{user.id}]. CallbackQuery'
-        await e.update.callback_query.answer('❌ Что-то пошло не так', show_alert=True)
+        with suppress(TelegramBadRequest):
+            await e.update.callback_query.answer('❌ Что-то пошло не так', show_alert=True)
     elif e.update.message:
         user = e.update.message.from_user
         update_info = f'Пользователь: @{user.username} [{user.id}]. Message'
-        await e.update.message.answer('❌ Что-то пошло не так')
+        with suppress(TelegramBadRequest):
+            await e.update.message.reply('❌ Что-то пошло не так')
 
     document = BufferedInputFile(stacktrace.encode(), 'Traceback.txt')
 

@@ -3,7 +3,7 @@ import re
 import aiohttp
 from bs4 import BeautifulSoup, Tag
 
-from database import ChannelService, Channel
+from database import ChannelService, Channel, Proxy
 
 
 async def update_channels(service: ChannelService, data: dict[str, ...] | None = None) -> int:
@@ -42,6 +42,7 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
                                     if match:
                                         channels.add(match.group(1))
         case 'telemetr.io':
+            proxy = await Proxy.find_one()
             async with aiohttp.ClientSession() as session:
                 async with session.get('https://telemetr.io/en/catalog/global/cryptocurrencies', headers={
                     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -58,7 +59,7 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
                     "sec-fetch-user": "?1",
                     "sec-gpc": "1",
                     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
-                }) as response:
+                }, proxy=str(proxy)) as response:
                     text = await response.text()
                     bs4 = BeautifulSoup(text, 'html.parser')
                     elements = bs4.select(".channel-name__attribute > span > span")
