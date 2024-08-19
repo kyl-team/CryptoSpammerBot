@@ -92,7 +92,7 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
         chat_result.members.append(user_result)
 
         if not bio:
-            return
+            continue
 
         occurrences = peer_pattern.findall(bio)
 
