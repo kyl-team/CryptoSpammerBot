@@ -1,7 +1,9 @@
 import re
+from contextlib import suppress
 
 import aiohttp
 from bs4 import BeautifulSoup, Tag
+from pymongo.errors import DuplicateKeyError
 
 from database import ChannelService, Channel, Proxy
 
@@ -80,6 +82,7 @@ async def update_channels(service: ChannelService, data: dict[str, ...] | None =
 
     for channel in channels:
         document = Channel(url=channel, service=service)
-        await document.insert()
+        with suppress(DuplicateKeyError):
+            await document.insert()
 
     return len(channels)

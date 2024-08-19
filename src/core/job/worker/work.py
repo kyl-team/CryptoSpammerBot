@@ -88,7 +88,7 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
         user_result = UserResult(id=member.user.id, username=member.user.username,
                                  phone=member.user.phone_number,
                                  first_name=member.user.first_name, last_name=member.user.last_name,
-                                 bio=bio)
+                                 bio=bio, message_sent=False)
         chat_result.members.append(user_result)
 
         if not bio:
@@ -102,6 +102,7 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
             try:
                 await client.send_message(member.user.id,
                                           obfuscate_text(storage.message.text))
+                user_result.message_sent = True
             except Exception as e:
                 chat_result.errors.append(
                     f'Не удалось написать участнику @{member.user.username} [{member.user.id}]. {format_exception(e)}')

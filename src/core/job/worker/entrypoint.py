@@ -18,6 +18,18 @@ from ...accounts import get_client
 async def start(user_id: int):
     channels: set[str] = set()
 
+    state_id = generate_state_id()
+
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text='❌ Остановить', callback_data=f'job_stop_{state_id}')
+
+    status_message = await bot.send_message(user_id, '⏱️ (1/3) Подготовка аккаунтов', reply_markup=builder.as_markup())
+
+    state = TaskState(status_message, len(channels))
+
+    online.states[state_id] = state
+
     async for channel in Channel.find():
         channels.add(channel.url)
 
@@ -50,6 +62,7 @@ async def start(user_id: int):
         proxy_index += 1
 
     if storage.similar:
+        await status_message.edit_text('⏱️ (2/3) Поиск похожих')
         channel_slices = slice_array(list(channels), len(clients))
 
         tasks = []
@@ -62,23 +75,13 @@ async def start(user_id: int):
             for channel in group:
                 channels.add(channel)
 
+    await status_message.edit_text('⏱️ (3/3) Запуск задачи')
+
     channels_for_clients = slice_array(list(channels), len(clients))
 
     max_load = max(0, *[len(x) for x in channels_for_clients])
-    if max_load > 20:
+    if max_load > 60:
         await bot.send_message(user_id, f'⚠️ Максимальная нагрузка на аккаунт: {max_load} каналов')
-
-    state_id = generate_state_id()
-
-    builder = InlineKeyboardBuilder()
-
-    builder.button(text='❌ Остановить', callback_data=f'job_stop_{state_id}')
-
-    status_message = await bot.send_message(user_id, f'🤖 Задача в процессе', reply_markup=builder.as_markup())
-
-    state = TaskState(status_message, len(channels))
-
-    online.states[state_id] = state
 
     tasks = []
     for i in range(len(clients)):

@@ -4,7 +4,7 @@ from .utils import format_date
 
 def format_member(result: UserResult, index: int) -> str:
     content = ''
-    content += f'{index}. @{result.username} ({result.first_name} {result.last_name}), телефон: {result.phone}, био: "{result.bio}", найдено бесед: {len(result.chats)} [{result.id}]\n'
+    content += f'{index}. @{result.username} ({result.first_name} {result.last_name}), телефон: {result.phone}, био: "{result.bio}", найдено бесед: {len(result.chats)} [{result.id}], {"написал" if result.message_sent else "не писал"}\n'
     for chat in result.chats:
         content += format_chat(chat)
     return content

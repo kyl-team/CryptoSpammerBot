@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from pymongo.errors import DuplicateKeyError
 from pyrofork.errors import SessionPasswordNeeded, PhoneCodeExpired
 
 from config import config
@@ -108,6 +109,9 @@ async def enter_code_or_password(message: Message, state: FSMContext):
     me = await client.get_me()
 
     account = Account(phone=phone, session=await client.export_session_string(), username=me.username, user_id=me.id)
-    await account.insert()
+    try:
+        await account.insert()
+    except DuplicateKeyError:
+        return await message.reply('❌ Аккаунт не добавлен', reply_markup=get_back_markup())
 
     await message.reply(f'✅ Вход в аккаунт @{me.username} успешен [{me.id}]', reply_markup=get_back_markup())

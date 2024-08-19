@@ -18,6 +18,7 @@ class UserResult(BaseModel):
     first_name: str | None
     last_name: str | None
     bio: str | None
+    message_sent: bool
     chats: list[ChatResult] = []
 
 
