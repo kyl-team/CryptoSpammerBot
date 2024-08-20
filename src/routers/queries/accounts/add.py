@@ -64,10 +64,9 @@ async def enter_phone(message: Message, state: FSMContext):
                                    reply_markup=get_back_markup())
 
     client = get_client(phone)
-    if client.is_connected:
-        raise RuntimeError('Illegal client connection')
 
-    await client.connect()
+    if not client.is_connected:
+        await client.connect()
     sent_code = await client.send_code(phone)
     await state.set_state(ManualAddGroup.code)
     await state.set_data({'phone': phone, 'phone_hash': sent_code.phone_code_hash})

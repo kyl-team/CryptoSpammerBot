@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pyrofork.errors import RPCError
 
 from core.accounts import get_client
+from core.accounts.manager import loaded_clients
 from database import Account
 
 detailed_router = Router()
@@ -24,6 +25,9 @@ async def get_detailed_account(query: CallbackQuery, match: re.Match[str]):
     builder.adjust(1, 1)
 
     if action == 'delete':
+        if account.phone in loaded_clients:
+            await loaded_clients[account.phone].disconnect()
+            del loaded_clients[account.phone]
         await account.delete()
         builder = InlineKeyboardBuilder()
         builder.button(text='🔙 Назад', callback_data='accounts')
