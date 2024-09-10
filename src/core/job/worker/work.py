@@ -106,7 +106,10 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
                                           obfuscate_text(storage.message.text))
                 user_result.message_sent = True
             except Exception:
-                await client.send_message('SpamBot', '/start')
+                try:
+                    await client.send_message('SpamBot', '/start')
+                except Exception:
+                    pass
 
                 try:
                     await client.send_message(member.user.id,
