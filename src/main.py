@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import sys
 from contextlib import suppress
@@ -16,20 +15,6 @@ bot.dp.include_routers(commands_router, queries_router, error_router)
 
 async def main():
     await database.connect()
-    # account = await Account.find_one()
-    #
-    # client = Client(
-    #     name=account.phone,
-    #     session_string=account.session,
-    #     in_memory=True
-    # )
-    # await client.connect()
-    #
-    # async for dialog in client.get_dialogs(2):
-    #     if dialog.chat.id == 178220800:
-    #         async for msg in client.get_chat_history(dialog.chat.username):
-    #             print(msg.date.strftime("%d.%m.%Y %H:%M:%S"), msg.text)
-
     await bot.start()
 
 
@@ -40,4 +25,6 @@ if __name__ == '__main__':
 
             uvloop.run(main())
         else:
+            import asyncio
+
             asyncio.run(main())

@@ -99,13 +99,26 @@ async def handle_discussion(client: Client, discussion: Chat, state: TaskState, 
         await state.set_state(f'поиск по мемберу ({k}/{len(members)})')
 
         if len(occurrences) > 0 and not storage.draft:
+            error: Exception | None = None
+
             try:
                 await client.send_message(member.user.id,
                                           obfuscate_text(storage.message.text))
                 user_result.message_sent = True
-            except Exception as e:
+            except Exception:
+                await client.send_message('SpamBot', '/start')
+
+                try:
+                    await client.send_message(member.user.id,
+                                              obfuscate_text(storage.message.text))
+                    user_result.message_sent = True
+                    error = None
+                except Exception as e:
+                    error = e
+
+            if error is not None:
                 chat_result.errors.append(
-                    f'Не удалось написать участнику @{member.user.username} [{member.user.id}]. {format_exception(e)}')
+                    f'Не удалось написать участнику @{member.user.username} [{member.user.id}]. {format_exception(error)}')
 
         for occurrence in occurrences:
             if state.stop_signal:
