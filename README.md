@@ -1,5 +1,8 @@
 # CryptoSpammer
 
+Бот для парса чатов с Ваших аккаунтов под Вашими прокси. Поможет для набора аудитории/арбитража трафика
+Бот готовый, но старый и не тестировался. Если Вы можете доработать проект, Вы можете открыть PR. А если у Вас и так все работает и вы будете очень благодрны, можете поблагодорить автора TON `UQAMagjFqSXb92x-ttePY1jfxcOBREAaNVO9P_V6OFGLDz2-`
+
 ## Deployment
 
 1. Install Docker latest version for your linux / Docker Desktop for Windows
